@@ -1,0 +1,58 @@
+package com.multithreading.folderSearchPattern;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+public class PatternSearchMain {
+
+	public static void main(String[] args) throws Exception {
+		// TODO Auto-generated method stub
+		String pattern ="public";
+		File dir = new File("./src/sample");
+		File [] files = dir.listFiles();
+		PatternFinder finder = new PatternFinder();
+		long startTime = System.currentTimeMillis(); 
+		ExecutorService executor = Executors.newFixedThreadPool(files.length);
+		Map<String,Object> resultMap = new HashMap<String,Object>();
+		for(File file: files) {
+			Future<List<Integer>> future = executor.submit(new Callable <List<Integer>>(){
+				public List<Integer> call(){
+					return finder.find(file, pattern);
+				}
+			});
+			resultMap.put(file.getName(), future);
+			//List<Integer> lineNumbers = finder.find(file, pattern);
+			//if(!lineNumbers.isEmpty())
+			//	System.out.println(pattern+ "; found at " + lineNumbers + " in the file " +  file.getName());
+		}
+		
+		waitForAll(resultMap);
+		
+		for(Map.Entry<String, Object> entry: resultMap.entrySet()) {
+			System.out.println(pattern+ "; found at " + entry.getValue() + " in the file " +  entry.getKey());
+		}
+		System.out.println("Time Taken to find pattern " + (System.currentTimeMillis()-startTime));
+	}
+	
+	
+	public static void waitForAll(Map<String,Object> resultMap) throws Exception {
+		Set<String> keys = resultMap.keySet();
+		
+		for(String key: keys) {
+			Future<List<Integer>> future = (Future<List<Integer>>)resultMap.get(key);
+			
+			while(!future.isDone()) {
+				;//Thread.yield();
+			}
+			resultMap.put(key, future.get());
+		}
+	}
+}
